@@ -11,14 +11,14 @@ import (
 )
 
 // AggregateByUser aggregates the activities for a given user.
-func (a activity) AggregateByUser() http.HandlerFunc {
+func (a Handler) AggregateByUser() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		a.aggregate(w, r, chi.URLParam(r, "user_id"))
 	}
 }
 
 // Aggregate aggregates the activities for all users.
-func (a activity) Aggregate() http.HandlerFunc {
+func (a Handler) Aggregate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		a.aggregate(w, r, "")
 	}
@@ -26,25 +26,25 @@ func (a activity) Aggregate() http.HandlerFunc {
 
 // aggregate writes the total for userID, or for all users when userID is empty, limited to the
 // optional from and to query parameters.
-func (a activity) aggregate(w http.ResponseWriter, r *http.Request, userID string) {
+func (a Handler) aggregate(w http.ResponseWriter, r *http.Request, userID string) {
 	logger := slog.Default()
 
 	from, err := parseTimeInput(r.URL.Query().Get("from"))
 	if err != nil {
-		logger.Error("invalid input format", "err", err)
+		logger.Warn("invalid input format", "err", err)
 		writeError(w, http.StatusBadRequest, "invalid input format")
 		return
 	}
 
 	to, err := parseTimeInput(r.URL.Query().Get("to"))
 	if err != nil {
-		logger.Error("invalid input format", "err", err)
+		logger.Warn("invalid input format", "err", err)
 		writeError(w, http.StatusBadRequest, "invalid input format")
 		return
 	}
 
 	if !from.IsZero() && !to.IsZero() && to.Before(from) {
-		logger.Error("invalid input format", "from", from, "to", to)
+		logger.Warn("invalid input format", "from", from, "to", to)
 		writeError(w, http.StatusBadRequest, "invalid input format")
 		return
 	}
@@ -55,7 +55,7 @@ func (a activity) aggregate(w http.ResponseWriter, r *http.Request, userID strin
 		To:     to,
 	})
 	if errors.Is(err, storage.ErrUserNotFound) {
-		logger.Error("unable to aggregate activities", "err", err)
+		logger.Warn("unable to aggregate activities", "err", err)
 		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
@@ -64,6 +64,7 @@ func (a activity) aggregate(w http.ResponseWriter, r *http.Request, userID strin
 		writeError(w, http.StatusInternalServerError, "unable to aggregate activities")
 		return
 	}
+	logger.Info("aggregated activities", "user_id", userID, "from", from, "to", to, "total", aggregate.Total)
 	writeJSON(w, http.StatusOK, aggregate)
 }
 

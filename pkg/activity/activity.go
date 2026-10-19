@@ -12,13 +12,14 @@ import (
 	storage "github.com/vwiart/assignment/storage/activity"
 )
 
-type activity struct {
+// Handler serves the activity endpoints over HTTP, backed by a Storage.
+type Handler struct {
 	store Storage
 }
 
-// New instantiates a new activity.
-func New(s Storage) activity {
-	return activity{store: s}
+// New returns a Handler that reads and writes activities through s.
+func New(s Storage) Handler {
+	return Handler{store: s}
 }
 
 // Storage are all the methods we need to access the repository layer.
@@ -32,7 +33,7 @@ type Storage interface {
 // Routes returns a router serving every activity endpoint. Routes under /users are about one
 // user's content: submitting a step count and reading that user's total. Routes under /activities
 // cover every user: the overall total, and listing and deleting submissions.
-func (a activity) Routes() http.Handler {
+func (a Handler) Routes() http.Handler {
 	mux := chi.NewMux()
 	mux.Get("/activities", a.ListHandler())
 	mux.Get("/activities/total", a.Aggregate())

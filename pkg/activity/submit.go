@@ -15,26 +15,26 @@ import (
 )
 
 // SubmitHandler is an endpoint to submit an activity.
-func (a activity) SubmitHandler() http.HandlerFunc {
+func (a Handler) SubmitHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := slog.Default()
 		var input submitInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			logger.Warn("failed to decode body", "err", err)
 			writeError(w, http.StatusBadRequest, "unable to decode body")
 			return
 		}
 		activity, err := input.normalize(chi.URLParam(r, "user_id"))
 		if err != nil {
-			logger.Error("failed to normalize body", "err", err)
+			logger.Warn("failed to normalize body", "err", err)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		logger.Info("submitting", "activity", activity)
 		aggregate, err := a.store.Submit(ctx, activity)
 		if errors.Is(err, storage.ErrUserNotFound) {
-			logger.Error("unable to submit activity", "err", err)
+			logger.Warn("unable to submit activity", "err", err)
 			writeError(w, http.StatusNotFound, "user not found")
 			return
 		}
@@ -44,6 +44,7 @@ func (a activity) SubmitHandler() http.HandlerFunc {
 			return
 		}
 
+		logger.Info("submitted activity", "activity", activity, "total", aggregate.Total)
 		writeJSON(w, http.StatusOK, submitResponse{ID: activity.ID, Total: aggregate.Total})
 	}
 }

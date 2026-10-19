@@ -11,20 +11,20 @@ import (
 )
 
 // DeleteHandler is an endpoint to delete an activity.
-func (a activity) DeleteHandler() http.HandlerFunc {
+func (a Handler) DeleteHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := slog.Default()
 
 		id, err := uuid.Parse(chi.URLParam(r, "activity_id"))
 		if err != nil {
-			logger.Error("invalid input", "err", err)
+			logger.Warn("invalid input", "err", err)
 			writeError(w, http.StatusBadRequest, "invalid input")
 			return
 		}
 		err = a.store.Delete(ctx, id)
 		if errors.Is(err, storage.ErrActivityNotFound) {
-			logger.Error("failed to delete", "err", err)
+			logger.Warn("failed to delete", "err", err)
 			writeError(w, http.StatusNotFound, "activity not found")
 			return
 		}
@@ -33,6 +33,7 @@ func (a activity) DeleteHandler() http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, "failed to delete")
 			return
 		}
+		logger.Info("deleted activity", "id", id)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

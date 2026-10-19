@@ -244,12 +244,6 @@ That is fixed and tested too. The other findings are now listed under "Assumptio
 
 Agreed in the second review, to be done one at a time:
 
-- **Log levels.** Log validation failures (`400`) at `WARN` instead of `ERROR`, and log
-  successful responses at `INFO`.
-- **Exit cleanly on startup failure.** Replace `panic` in `main` with an error log and
-  `os.Exit(1)`.
-- **Export the handler type.** `activity.New` is exported but returns an unexported type. Export
-  the type and document it.
 - **Limit request bodies and set server timeouts.** Cap request bodies at a small size with
   `http.MaxBytesReader`. Set read, write and idle timeouts on the `http.Server` (about 100 ms for
   requests). There is no retry: a request that runs over the timeout fails.

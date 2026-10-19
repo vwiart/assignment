@@ -20,13 +20,13 @@ const (
 )
 
 // ListHandler is an endpoint to list activities, one page at a time.
-func (a activity) ListHandler() http.HandlerFunc {
+func (a Handler) ListHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logger := slog.Default()
 
 		opts, err := parseListOptions(r.URL.Query())
 		if err != nil {
-			logger.Error("invalid input", "err", err)
+			logger.Warn("invalid input", "err", err)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -37,6 +37,7 @@ func (a activity) ListHandler() http.HandlerFunc {
 			writeError(w, http.StatusInternalServerError, "unable to list activities")
 			return
 		}
+		logger.Info("listed activities", "limit", opts.Limit, "after", opts.After, "count", len(activities))
 		if len(activities) == 0 {
 			w.WriteHeader(http.StatusNoContent)
 			return
