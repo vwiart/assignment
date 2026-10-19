@@ -27,7 +27,7 @@ func main() {
 	slog.SetDefault(logger)
 	if err := startService(ctx); err != nil {
 		logger.Error("failed to start service", "err", err)
-		panic(err)
+		os.Exit(1)
 	}
 }
 
