@@ -83,11 +83,7 @@ func (a activity) aggregate(ctx context.Context, tx *sql.Tx, opts AggregateOptio
 	}
 
 	var agg model.Aggregate
-	row := tx.QueryRowContext(ctx, query.String(), args...)
-	if row.Err() != nil {
-		return agg, nil
-	}
-	err := row.Scan(&agg.Total)
+	err := tx.QueryRowContext(ctx, query.String(), args...).Scan(&agg.Total)
 	return agg, err
 }
 

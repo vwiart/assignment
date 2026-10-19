@@ -63,6 +63,14 @@ func TestAggregate(t *testing.T) {
 			assert.Equal(t, tt.want, agg.Total)
 		})
 	}
+
+	t.Run("returns the error when the query fails", func(t *testing.T) {
+		_, err := store.db.ExecContext(t.Context(), `DROP TABLE activity`)
+		require.NoError(t, err)
+
+		_, err = store.Aggregate(t.Context(), AggregateOptions{})
+		assert.Error(t, err)
+	})
 }
 
 func TestSubmit(t *testing.T) {
