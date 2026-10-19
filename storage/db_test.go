@@ -44,6 +44,32 @@ func TestMigrate(t *testing.T) {
 	})
 }
 
+func TestMigrationVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		file    string
+		want    int
+		wantErr bool
+	}{
+		{name: "parses the version prefix", file: "0001_init.sql", want: 1},
+		{name: "parses a multi-digit version", file: "0042_add_index.sql", want: 42},
+		{name: "rejects a name without a description", file: "0001.sql", wantErr: true},
+		{name: "rejects a non-numeric prefix", file: "init_users.sql", wantErr: true},
+		{name: "rejects version zero", file: "0000_init.sql", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := migrationVersion(tt.file)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func userVersion(t *testing.T, conn *sql.DB) int {
 	t.Helper()
 	var version int

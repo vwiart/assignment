@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"path/filepath"
 	"testing"
 	"time"
@@ -64,12 +65,104 @@ func TestAggregate(t *testing.T) {
 }
 
 func TestSubmit(t *testing.T) {
-	t.Run("returns the total across all users", func(t *testing.T) {
-		store := newStore(t)
+	store := newStore(t)
+	date := time.Date(2026, 10, 19, 8, 30, 0, 0, time.UTC)
 
-		assert.Equal(t, 100, submit(t, store, "alice", "2026-10-19T00:00:00Z", 100).Total)
-		assert.Equal(t, 107, submit(t, store, "bob", "2026-10-20T00:00:00Z", 7).Total)
+	tests := []struct {
+		name      string
+		userID    string
+		steps     int
+		wantTotal int
+		wantErr   bool
+	}{
+		{name: "returns the total including the new activity", userID: "alice", steps: 100, wantTotal: 100},
+		{name: "returns the total across all users", userID: "bob", steps: 7, wantTotal: 107},
+		{name: "rejects an unknown user", userID: "dave", steps: 1, wantErr: true},
+		{name: "rejects zero steps", userID: "alice", steps: 0, wantErr: true},
+		{name: "rejects more than 100000 steps", userID: "alice", steps: 100_001, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agg, err := store.Submit(t.Context(), model.Activity{ID: uuid.NewV7(), UserID: tt.userID, Date: date, StepCount: tt.steps})
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, agg.Total)
+		})
+	}
+
+	t.Run("does not store rejected activities", func(t *testing.T) {
+		agg, err := store.Aggregate(t.Context(), AggregateOptions{})
+		require.NoError(t, err)
+		assert.Equal(t, 107, agg.Total)
 	})
+}
+
+func TestList(t *testing.T) {
+	alice := model.Activity{
+		ID:        uuid.NewV7(),
+		UserID:    "alice",
+		Date:      time.Date(2026, 10, 19, 8, 30, 0, 0, time.FixedZone("CEST", 2*60*60)),
+		StepCount: 100,
+	}
+	bob := model.Activity{ID: uuid.NewV7(), UserID: "bob", Date: time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), StepCount: 7}
+	aliceUTC := alice
+	aliceUTC.Date = alice.Date.UTC()
+
+	tests := []struct {
+		name string
+		seed []model.Activity
+		want []model.Activity
+	}{
+		{name: "returns nothing without activities"},
+		{name: "returns every activity with its date in UTC", seed: []model.Activity{alice, bob}, want: []model.Activity{aliceUTC, bob}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newStore(t)
+			for _, a := range tt.seed {
+				_, err := store.Submit(t.Context(), a)
+				require.NoError(t, err)
+			}
+
+			got, err := store.List(t.Context())
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestDelete(t *testing.T) {
+	store := newStore(t)
+	date := time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
+	kept := model.Activity{ID: uuid.NewV7(), UserID: "alice", Date: date, StepCount: 100}
+	deleted := model.Activity{ID: uuid.NewV7(), UserID: "bob", Date: date, StepCount: 7}
+	for _, a := range []model.Activity{kept, deleted} {
+		_, err := store.Submit(t.Context(), a)
+		require.NoError(t, err)
+	}
+
+	tests := []struct {
+		name      string
+		id        uuid.UUID
+		wantErr   error
+		wantTotal int
+	}{
+		{name: "deletes one activity", id: deleted.ID, wantTotal: 100},
+		{name: "returns ErrNoRows for an activity already deleted", id: deleted.ID, wantErr: sql.ErrNoRows, wantTotal: 100},
+		{name: "returns ErrNoRows for an unknown activity", id: uuid.NewV7(), wantErr: sql.ErrNoRows, wantTotal: 100},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.ErrorIs(t, store.Delete(t.Context(), tt.id), tt.wantErr)
+
+			agg, err := store.Aggregate(t.Context(), AggregateOptions{})
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantTotal, agg.Total)
+		})
+	}
 }
 
 func newStore(t *testing.T) activity {
