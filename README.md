@@ -181,8 +181,10 @@ the boundaries by passing `from` and `to`.
 ## Design decisions and trade-offs
 
 - **SQLite** keeps the service to one binary and one file, and meets the persistence requirement.
-  WAL mode and a 5-second busy timeout let reads run during writes. A shared database server would
-  be needed to run more than one instance.
+  SQLite allows one writer at a time, so the pool holds a single connection: database/sql queues
+  concurrent requests instead of SQLite rejecting them with `SQLITE_BUSY`. Reads queue behind
+  writes too, which is fine at this scale. A shared database server would be needed to run more
+  than one instance.
 - **Migrations** are SQL files embedded in the binary. The schema version is kept in
   `PRAGMA user_version`, and each file runs in its own transaction. This avoids a migration library.
 - **Totals are computed at read time** with `SUM`, backed by indexes. This is simple and always
@@ -209,13 +211,6 @@ The issues found by running the first draft against a fresh database (zero steps
 deleting an unknown submission, submission routes under `/users`) are fixed, each with a test.
 A second review against the brief found the following. They will be fixed one at a time.
 
-- **Concurrent submissions fail with `500`.** With 64 clients sending 400 submissions in
-  parallel, 80 failed with `database is locked (5)` or `(517)`. `Submit` starts a deferred
-  transaction, reads (the user check) and then writes. In WAL mode, a read transaction that has
-  to become a write transaction on an outdated snapshot fails at once, without waiting for the
-  busy timeout. Fix: start write transactions as `IMMEDIATE` (for example `_txlock=immediate` in
-  the connection string), with a concurrent test that fails before the fix. Then correct the
-  SQLite bullet in "Design decisions and trade-offs".
 - **Retention and deletion are not explained.** "Each submission should be retained" is read
   together with "a user may submit multiple step counts on the same day": two submissions on the
   same day are both kept and both counted. Deleting a submission is a separate, explicit

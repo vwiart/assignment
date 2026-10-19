@@ -2,6 +2,7 @@ package storage
 
 import (
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 	"uuid"
@@ -110,6 +111,27 @@ func TestSubmit(t *testing.T) {
 		agg, err := store.Aggregate(t.Context(), AggregateOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, 107, agg.Total)
+	})
+
+	t.Run("stores every activity submitted concurrently", func(t *testing.T) {
+		const submissions = 200
+		errs := make(chan error, submissions)
+		var wg sync.WaitGroup
+		for range submissions {
+			wg.Go(func() {
+				_, err := store.Submit(t.Context(), model.Activity{ID: uuid.NewV7(), UserID: "charles", Date: date, StepCount: 1})
+				errs <- err
+			})
+		}
+		wg.Wait()
+		close(errs)
+		for err := range errs {
+			assert.NoError(t, err)
+		}
+
+		agg, err := store.Aggregate(t.Context(), AggregateOptions{UserID: "charles"})
+		require.NoError(t, err)
+		assert.Equal(t, submissions, agg.Total)
 	})
 }
 

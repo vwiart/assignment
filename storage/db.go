@@ -23,6 +23,9 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to open database: %w", err)
 	}
+	// SQLite allows one writer at a time. With several connections, concurrent submissions fail
+	// with SQLITE_BUSY instead of waiting. One connection makes database/sql queue them.
+	db.SetMaxOpenConns(1)
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
