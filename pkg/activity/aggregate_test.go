@@ -87,6 +87,13 @@ func TestAggregateHandlers(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
+			name:       "returns 404 for an unknown user",
+			target:     "/users/dave/total",
+			storeErr:   storage.ErrUserNotFound,
+			wantStatus: http.StatusNotFound,
+			wantOpts:   &storage.AggregateOptions{UserID: "dave"},
+		},
+		{
 			name:       "returns 500 when the store fails",
 			target:     "/activities/total",
 			storeErr:   errors.New("boom"),

@@ -73,7 +73,8 @@ curl -X POST localhost:8080/users/alice \
 | ------ | ------------------------------------------------- |
 | `200`  | Stored. The body holds the total across all users. |
 | `400`  | Body is not JSON, `step_count` is not between 1 and 100,000, or `date` is not RFC 3339. |
-| `500`  | Storage error (see [Known issues](#known-issues)). |
+| `404`  | The user does not exist. |
+| `500`  | Storage error. |
 
 ### Get totals
 
@@ -89,7 +90,7 @@ curl 'localhost:8080/activities/total?from=2026-10-19T00:00:00Z&to=2026-10-20T00
 
 `from` and `to` are RFC 3339 timestamps and are both optional. The range includes `from` and
 excludes `to` (`from <= date < to`), so adjacent ranges never count a submission twice. An invalid
-timestamp, or a `to` before `from`, returns `400`.
+timestamp, or a `to` before `from`, returns `400`. A total for an unknown user returns `404`.
 
 In a query string, `+` means a space. A timestamp with a positive offset such as `+02:00` must
 encode the `+` as `%2B`, or it fails to parse and returns `400`:
@@ -144,8 +145,8 @@ same range.
 
 **Date ranges with no data.** Return `{"total": 0}`, as do users with no submissions.
 
-**Unknown users.** Users are a fixed, seeded list. The foreign key rejects a submission for any
-other user.
+**Unknown users.** Users are a fixed, seeded list. A submission or a total for any other user
+returns `404`. The foreign key on `activity.user_id` is a second guard.
 
 **Time zones and date boundaries.** Clients send a full timestamp with an offset. The server
 converts it to UTC before storing it. A "day" is not defined on the server; the client chooses
@@ -173,7 +174,6 @@ Found by running the service against a fresh database. These are not fixed yet.
 
 | Area | Current behaviour | Expected |
 | ---- | ----------------- | -------- |
-| Unknown user | A foreign key failure returns `500` on submit. A total for an unknown user also returns `500`. | `404 Not Found`. |
 | Delete | Deleting an unknown ID returns `500`. | `404 Not Found`; `204 No Content` on success. |
 | Routes | `GET /users` lists submissions and `DELETE /users/{id}` takes a submission ID. | `GET /activities` and `DELETE /activities/{id}`. |
 

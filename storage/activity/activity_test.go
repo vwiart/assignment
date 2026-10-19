@@ -20,13 +20,15 @@ func TestAggregate(t *testing.T) {
 	submit(t, store, "bob", "2026-10-20T00:00:00Z", 1)
 
 	tests := []struct {
-		name string
-		opts AggregateOptions
-		want int
+		name    string
+		opts    AggregateOptions
+		want    int
+		wantErr error
 	}{
 		{name: "sums every activity without options", want: 111},
 		{name: "sums one user's activities", opts: AggregateOptions{UserID: "alice"}, want: 110},
 		{name: "returns zero for a user without activities", opts: AggregateOptions{UserID: "charles"}, want: 0},
+		{name: "returns ErrUserNotFound for an unknown user", opts: AggregateOptions{UserID: "dave"}, wantErr: ErrUserNotFound},
 		{name: "includes an activity at from", opts: AggregateOptions{From: parse(t, "2026-10-19T12:00:00Z")}, want: 11},
 		{name: "excludes an activity at to", opts: AggregateOptions{To: parse(t, "2026-10-20T00:00:00Z")}, want: 110},
 		{
@@ -58,7 +60,7 @@ func TestAggregate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			agg, err := store.Aggregate(t.Context(), tt.opts)
-			require.NoError(t, err)
+			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, tt.want, agg.Total)
 		})
 	}
@@ -74,10 +76,11 @@ func TestSubmit(t *testing.T) {
 		steps     int
 		wantTotal int
 		wantErr   bool
+		wantErrIs error
 	}{
 		{name: "returns the total including the new activity", userID: "alice", steps: 100, wantTotal: 100},
 		{name: "returns the total across all users", userID: "bob", steps: 7, wantTotal: 107},
-		{name: "rejects an unknown user", userID: "dave", steps: 1, wantErr: true},
+		{name: "rejects an unknown user", userID: "dave", steps: 1, wantErr: true, wantErrIs: ErrUserNotFound},
 		{name: "rejects zero steps", userID: "alice", steps: 0, wantErr: true},
 		{name: "rejects more than 100000 steps", userID: "alice", steps: 100_001, wantErr: true},
 	}
@@ -86,6 +89,9 @@ func TestSubmit(t *testing.T) {
 			agg, err := store.Submit(t.Context(), model.Activity{ID: uuid.NewV7(), UserID: tt.userID, Date: date, StepCount: tt.steps})
 			if tt.wantErr {
 				assert.Error(t, err)
+				if tt.wantErrIs != nil {
+					assert.ErrorIs(t, err, tt.wantErrIs)
+				}
 				return
 			}
 			require.NoError(t, err)

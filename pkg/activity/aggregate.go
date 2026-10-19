@@ -2,6 +2,7 @@ package activity
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -40,6 +41,11 @@ func (a activity) AggregateByUser() http.HandlerFunc {
 			From:   from,
 			To:     to,
 		})
+		if errors.Is(err, storage.ErrUserNotFound) {
+			logger.Error("unable to aggregate activities", "err", err)
+			http.Error(w, "user not found", http.StatusNotFound)
+			return
+		}
 		if err != nil {
 			logger.Error("unable to list activities", "err", err)
 			http.Error(w, "unable to list activities", http.StatusInternalServerError)

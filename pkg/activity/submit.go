@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vwiart/assignment/model"
+	storage "github.com/vwiart/assignment/storage/activity"
 )
 
 // SubmitHandler is an endpoint to submit an activity.
@@ -32,6 +33,11 @@ func (a activity) SubmitHandler() http.HandlerFunc {
 
 		logger.Info("submitting", "activity", activity)
 		aggregate, err := a.store.Submit(ctx, activity)
+		if errors.Is(err, storage.ErrUserNotFound) {
+			logger.Error("unable to submit activity", "err", err)
+			http.Error(w, "user not found", http.StatusNotFound)
+			return
+		}
 		if err != nil {
 			logger.Error("unable to submit activity", "err", err)
 			http.Error(w, "unable to submit activity", http.StatusInternalServerError)

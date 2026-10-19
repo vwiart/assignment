@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vwiart/assignment/model"
+	storage "github.com/vwiart/assignment/storage/activity"
 )
 
 func TestSubmitHandler(t *testing.T) {
@@ -30,6 +31,7 @@ func TestSubmitHandler(t *testing.T) {
 		{name: "rejects zero steps", body: `{"step_count": 0, "date": "2026-10-19T08:30:00Z"}`, wantStatus: http.StatusBadRequest},
 		{name: "rejects more than 100000 steps", body: `{"step_count": 100001, "date": "2026-10-19T08:30:00Z"}`, wantStatus: http.StatusBadRequest},
 		{name: "rejects a date that is not RFC 3339", body: `{"step_count": 4200, "date": "2026-10-19"}`, wantStatus: http.StatusBadRequest},
+		{name: "returns 404 for an unknown user", body: valid, storeErr: storage.ErrUserNotFound, wantStatus: http.StatusNotFound, wantStored: true},
 		{name: "returns 500 when the store fails", body: valid, storeErr: errors.New("boom"), wantStatus: http.StatusInternalServerError, wantStored: true},
 	}
 	for _, tt := range tests {

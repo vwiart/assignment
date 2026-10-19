@@ -11,6 +11,9 @@ import (
 	"github.com/vwiart/assignment/model"
 )
 
+// ErrUserNotFound is returned when an operation refers to a user that does not exist.
+var ErrUserNotFound = errors.New("user not found")
+
 type activity struct {
 	db *sql.DB
 }
@@ -42,6 +45,12 @@ func (a activity) Aggregate(ctx context.Context, opts AggregateOptions) (model.A
 }
 
 func (a activity) aggregate(ctx context.Context, tx *sql.Tx, opts AggregateOptions) (model.Aggregate, error) {
+	if opts.UserID != "" {
+		if err := userExists(ctx, tx, opts.UserID); err != nil {
+			return model.Aggregate{}, err
+		}
+	}
+
 	var (
 		query strings.Builder
 		args  []any
@@ -150,6 +159,11 @@ func (a activity) Submit(ctx context.Context, activity model.Activity) (model.Ag
 		return model.Aggregate{}, err
 	}
 
+	if err := userExists(ctx, tx, activity.UserID); err != nil {
+		tx.Rollback()
+		return model.Aggregate{}, err
+	}
+
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO activity (id, user_id, date, step_count) VALUES (?, ?, ?, ?)
 	`, activity.ID, activity.UserID, activity.Date.UTC().Format(time.RFC3339), activity.StepCount); err != nil {
@@ -164,4 +178,16 @@ func (a activity) Submit(ctx context.Context, activity model.Activity) (model.Ag
 	}
 
 	return agg, tx.Commit()
+}
+
+// userExists returns ErrUserNotFound when no user has the given ID.
+func userExists(ctx context.Context, tx *sql.Tx, userID string) error {
+	var exists bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM user WHERE id = ?)`, userID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return ErrUserNotFound
+	}
+	return nil
 }
