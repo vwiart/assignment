@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Step counts</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    form { display: grid; gap: .75rem; margin-bottom: 1.5rem; }
+    label { display: grid; gap: .25rem; }
+    input, button { font: inherit; padding: .4rem; }
+    dl { display: grid; grid-template-columns: auto 1fr; gap: .5rem 1rem; }
+    dd { margin: 0; font-weight: bold; }
+    .error { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>Step counts</h1>
+
+  <form id="submit">
+    <label>User <input name="user" list="users" value="alice" required></label>
+    <datalist id="users"><option value="alice"><option value="bob"><option value="charles"></datalist>
+    <label>Date <input name="date" type="datetime-local" required></label>
+    <label>Steps <input name="steps" type="number" min="1" max="100000" required></label>
+    <button>Submit</button>
+  </form>
+  <p id="message" role="status"></p>
+
+  <h2>Totals</h2>
+  <form id="range">
+    <label>From <input name="from" type="datetime-local"></label>
+    <label>To <input name="to" type="datetime-local"></label>
+    <button>Refresh</button>
+  </form>
+  <dl>
+    <dt>All users</dt><dd id="total">-</dd>
+    <dt id="user-label">alice</dt><dd id="user-total">-</dd>
+  </dl>
+
+  <script>
+    const submitForm = document.getElementById("submit");
+    const rangeForm = document.getElementById("range");
+    const message = document.getElementById("message");
+
+    // rfc3339 converts a datetime-local value, read in the browser's time zone, to UTC RFC 3339.
+    const rfc3339 = (value) => new Date(value).toISOString();
+
+    function show(text, isError) {
+      message.textContent = text;
+      message.className = isError ? "error" : "";
+    }
+
+    async function request(url, options) {
+      const res = await fetch(url, options);
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error);
+      return body;
+    }
+
+    function refresh() {
+      const user = submitForm.elements.user.value;
+      const params = new URLSearchParams();
+      for (const name of ["from", "to"]) {
+        const value = rangeForm.elements[name].value;
+        if (value) params.set(name, rfc3339(value));
+      }
+      const query = params.size ? "?" + params : "";
+
+      document.getElementById("user-label").textContent = user;
+      show("");
+      const totals = { "total": "/activities/total", "user-total": `/users/${encodeURIComponent(user)}/total` };
+      for (const [id, url] of Object.entries(totals)) {
+        const cell = document.getElementById(id);
+        cell.textContent = "-";
+        request(url + query).then((body) => { cell.textContent = body.total; }, (err) => show(err.message, true));
+      }
+    }
+
+    submitForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fields = submitForm.elements;
+      try {
+        const { total } = await request(`/users/${encodeURIComponent(fields.user.value)}`, {
+          method: "POST",
+          body: JSON.stringify({ step_count: Number(fields.steps.value), date: rfc3339(fields.date.value) }),
+        });
+        refresh();
+        show(`Saved. Total across all users: ${total}.`);
+      } catch (err) {
+        show(err.message, true);
+      }
+    });
+    rangeForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      refresh();
+    });
+    submitForm.elements.user.addEventListener("change", refresh);
+
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    submitForm.elements.date.value = now.toISOString().slice(0, 16);
+    refresh();
+  </script>
+</body>
+</html>

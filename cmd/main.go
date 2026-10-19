@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/vwiart/assignment/pkg/activity"
+	"github.com/vwiart/assignment/pkg/ui"
 	"github.com/vwiart/assignment/storage"
 	store "github.com/vwiart/assignment/storage/activity"
 )
@@ -45,7 +47,9 @@ func startService(ctx context.Context) error {
 		return err
 	}
 
-	routes := activity.New(store.NewActivity(db)).Routes()
+	routes := chi.NewMux()
+	routes.Get("/", ui.Handler())
+	routes.Mount("/", activity.New(store.NewActivity(db)).Routes())
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {

@@ -21,7 +21,9 @@ Users submit a number of steps for a date. Every submission is kept, and the ser
 go run ./cmd
 ```
 
-The server listens on port `8080`. Set `SERVER_PORT` to use another port:
+The server listens on port `8080`. Open <http://localhost:8080/> for a small page that submits
+step counts and shows the total across all users and the total for one user, optionally limited
+to a date range. Set `SERVER_PORT` to use another port:
 
 ```bash
 SERVER_PORT=9000 go run ./cmd
@@ -51,6 +53,8 @@ go test ./...
   delete, totals and range bounds against a temporary SQLite database.
 - [pkg/activity](pkg/activity) has one test file per endpoint. Each one sends requests through
   the real router to the handlers, backed by a fake store.
+- [pkg/ui/ui_test.go](pkg/ui/ui_test.go) checks that the page is served as HTML. The page itself
+  was checked by hand in a browser.
 
 ## API
 
@@ -196,5 +200,4 @@ with a test.
 ## Possible improvements
 
 - Let users be created, or accept any user ID, depending on how users are managed upstream.
-- Add a simple UI to submit counts and show both totals.
 - Add a per-day rollup table if totals become slow.
