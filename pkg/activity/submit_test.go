@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -42,6 +43,14 @@ func TestSubmitHandler(t *testing.T) {
 			New(store).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/users/alice", strings.NewReader(tt.body)))
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
+			if rec.Code != http.StatusNoContent {
+				assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+			}
+			if rec.Code >= http.StatusBadRequest {
+				var body struct{ Error string }
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+				assert.NotEmpty(t, body.Error)
+			}
 			if !tt.wantStored {
 				assert.Nil(t, store.gotActivity, "store must not be called")
 				return

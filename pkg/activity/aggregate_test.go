@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -108,6 +109,14 @@ func TestAggregateHandlers(t *testing.T) {
 			New(store).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.target, nil))
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
+			if rec.Code != http.StatusNoContent {
+				assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+			}
+			if rec.Code >= http.StatusBadRequest {
+				var body struct{ Error string }
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+				assert.NotEmpty(t, body.Error)
+			}
 			if tt.wantOpts == nil {
 				assert.Nil(t, store.gotOpts, "store must not be called")
 				return

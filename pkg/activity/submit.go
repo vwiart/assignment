@@ -21,13 +21,13 @@ func (a activity) SubmitHandler() http.HandlerFunc {
 		logger := slog.Default()
 		var input submitInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			http.Error(w, "unable to decode body", http.StatusBadRequest)
+			writeError(w, http.StatusBadRequest, "unable to decode body")
 			return
 		}
 		activity, err := input.normalize(chi.URLParam(r, "user_id"))
 		if err != nil {
 			logger.Error("failed to normalize body", "err", err)
-			http.Error(w, "failed to normalize body", http.StatusBadRequest)
+			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -35,20 +35,16 @@ func (a activity) SubmitHandler() http.HandlerFunc {
 		aggregate, err := a.store.Submit(ctx, activity)
 		if errors.Is(err, storage.ErrUserNotFound) {
 			logger.Error("unable to submit activity", "err", err)
-			http.Error(w, "user not found", http.StatusNotFound)
+			writeError(w, http.StatusNotFound, "user not found")
 			return
 		}
 		if err != nil {
 			logger.Error("unable to submit activity", "err", err)
-			http.Error(w, "unable to submit activity", http.StatusInternalServerError)
+			writeError(w, http.StatusInternalServerError, "unable to submit activity")
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(aggregate); err != nil {
-			logger.Error("failed to encode body", "err", err)
-			http.Error(w, "failed to encode body", http.StatusInternalServerError)
-			return
-		}
+		writeJSON(w, http.StatusOK, aggregate)
 	}
 }
 

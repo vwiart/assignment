@@ -19,18 +19,18 @@ func (a activity) DeleteHandler() http.HandlerFunc {
 		id, err := uuid.Parse(chi.URLParam(r, "activity_id"))
 		if err != nil {
 			logger.Error("invalid input", "err", err)
-			http.Error(w, "invalid input", http.StatusBadRequest)
+			writeError(w, http.StatusBadRequest, "invalid input")
 			return
 		}
 		err = a.store.Delete(ctx, id)
 		if errors.Is(err, storage.ErrActivityNotFound) {
 			logger.Error("failed to delete", "err", err)
-			http.Error(w, "activity not found", http.StatusNotFound)
+			writeError(w, http.StatusNotFound, "activity not found")
 			return
 		}
 		if err != nil {
 			logger.Error("failed to delete", "err", err)
-			http.Error(w, "failed to delete", http.StatusInternalServerError)
+			writeError(w, http.StatusInternalServerError, "failed to delete")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)

@@ -46,7 +46,12 @@ go test ./...
 
 ## API
 
-All bodies are JSON. Dates use RFC 3339.
+All bodies are JSON and sent with `Content-Type: application/json`. Dates use RFC 3339. Every
+error has the same shape:
+
+```json
+{"error": "step count must be between 1 and 100000"}
+```
 
 | Method   | Route                       | Purpose                                                  |
 | -------- | --------------------------- | -------------------------------------------------------- |
@@ -178,7 +183,6 @@ with a test.
 
 ## Possible improvements
 
-- Return errors as JSON with a stable shape, and set `Content-Type: application/json`.
 - Add pagination to the submission list.
 - Let users be created, or accept any user ID, depending on how users are managed upstream.
 - Make the database path configurable.

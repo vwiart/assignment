@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"uuid"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vwiart/assignment/model"
 )
 
@@ -44,6 +46,14 @@ func TestListHandler(t *testing.T) {
 			New(store).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/activities", nil))
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
+			if rec.Code != http.StatusNoContent {
+				assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+			}
+			if rec.Code >= http.StatusBadRequest {
+				var body struct{ Error string }
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+				assert.NotEmpty(t, body.Error)
+			}
 			switch tt.wantStatus {
 			case http.StatusOK:
 				assert.JSONEq(t, tt.wantBody, rec.Body.String())

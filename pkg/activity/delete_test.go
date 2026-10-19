@@ -1,6 +1,7 @@
 package activity
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,7 @@ import (
 	"uuid"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	storage "github.com/vwiart/assignment/storage/activity"
 )
 
@@ -34,6 +36,14 @@ func TestDeleteHandler(t *testing.T) {
 			New(store).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, tt.target, nil))
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
+			if rec.Code != http.StatusNoContent {
+				assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+			}
+			if rec.Code >= http.StatusBadRequest {
+				var body struct{ Error string }
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+				assert.NotEmpty(t, body.Error)
+			}
 			assert.Equal(t, tt.wantID, store.gotID)
 		})
 	}

@@ -1,7 +1,6 @@
 package activity
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -33,20 +32,20 @@ func (a activity) aggregate(w http.ResponseWriter, r *http.Request, userID strin
 	from, err := parseTimeInput(r.URL.Query().Get("from"))
 	if err != nil {
 		logger.Error("invalid input format", "err", err)
-		http.Error(w, "invalid input format", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid input format")
 		return
 	}
 
 	to, err := parseTimeInput(r.URL.Query().Get("to"))
 	if err != nil {
 		logger.Error("invalid input format", "err", err)
-		http.Error(w, "invalid input format", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid input format")
 		return
 	}
 
 	if !from.IsZero() && !to.IsZero() && to.Before(from) {
 		logger.Error("invalid input format", "from", from, "to", to)
-		http.Error(w, "invalid input format", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid input format")
 		return
 	}
 
@@ -57,18 +56,15 @@ func (a activity) aggregate(w http.ResponseWriter, r *http.Request, userID strin
 	})
 	if errors.Is(err, storage.ErrUserNotFound) {
 		logger.Error("unable to aggregate activities", "err", err)
-		http.Error(w, "user not found", http.StatusNotFound)
+		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
 	if err != nil {
-		logger.Error("unable to list activities", "err", err)
-		http.Error(w, "unable to list activities", http.StatusInternalServerError)
+		logger.Error("unable to aggregate activities", "err", err)
+		writeError(w, http.StatusInternalServerError, "unable to aggregate activities")
 		return
 	}
-	if err := json.NewEncoder(w).Encode(aggregate); err != nil {
-		http.Error(w, "failed to encode body", http.StatusInternalServerError)
-		return
-	}
+	writeJSON(w, http.StatusOK, aggregate)
 }
 
 func parseTimeInput(s string) (time.Time, error) {
