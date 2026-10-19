@@ -249,10 +249,7 @@ milliseconds.)
 
 ## Known issues
 
-The issues found by running the first draft against a fresh database (zero steps, unknown users,
-deleting an unknown submission, submission routes under `/users`) are fixed, each with a test.
-A second review against the brief found that concurrent submissions failed with `SQLITE_BUSY`.
-That is fixed and tested too. The other findings are now listed under "Assumptions".
+None known. Accepted limits are listed under "Assumptions" and "Design decisions and trade-offs".
 
 ## Possible improvements
 
