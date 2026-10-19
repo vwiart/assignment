@@ -29,7 +29,9 @@ type Storage interface {
 	Submit(ctx context.Context, activity model.Activity) (model.Aggregate, error)
 }
 
-// Routes returns a router serving every activity endpoint.
+// Routes returns a router serving every activity endpoint. Routes under /users are about one
+// user's content: submitting a step count and reading that user's total. Routes under /activities
+// cover every user: the overall total, and listing and deleting submissions.
 func (a activity) Routes() http.Handler {
 	mux := chi.NewMux()
 	mux.Get("/activities", a.ListHandler())

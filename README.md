@@ -238,9 +238,6 @@ That is fixed and tested too. The other findings are now listed under "Assumptio
 
 Agreed in the second review, to be done one at a time:
 
-- **Explain the routes.** Add a comment to `Routes()`: `/users/...` routes are for one user's
-  content (submitting and reading that user's activity), and `/activities/...` routes cover every
-  user.
 - **Align the run command and the requirements.** README and `AGENTS.md` should both use
   `go run cmd/main.go`. List the requirements to install before running, starting with Go 1.27.
 - **Add the missing doc comments** on `storage.Open` and `storage.ApplyMigrations`.
