@@ -1,13 +1,11 @@
 package activity
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-	"uuid"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -116,23 +114,4 @@ func TestAggregateHandlers(t *testing.T) {
 			}
 		})
 	}
-}
-
-type fakeStore struct {
-	aggregate model.Aggregate
-	err       error
-	gotOpts   *storage.AggregateOptions
-}
-
-func (f *fakeStore) Aggregate(_ context.Context, opts storage.AggregateOptions) (model.Aggregate, error) {
-	f.gotOpts = &opts
-	return f.aggregate, f.err
-}
-
-func (f *fakeStore) Delete(context.Context, uuid.UUID) error { return f.err }
-
-func (f *fakeStore) List(context.Context) ([]model.Activity, error) { return nil, f.err }
-
-func (f *fakeStore) Submit(context.Context, model.Activity) (model.Aggregate, error) {
-	return f.aggregate, f.err
 }

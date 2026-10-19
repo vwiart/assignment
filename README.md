@@ -37,11 +37,12 @@ from an empty database, stop the server and delete `data/db*`.
 go test ./...
 ```
 
-- [storage/db_test.go](storage/db_test.go) checks that migrations are applied once.
-- [storage/activity/activity_test.go](storage/activity/activity_test.go) runs totals and range
-  bounds against a temporary SQLite database.
-- [pkg/activity/aggregate_test.go](pkg/activity/aggregate_test.go) checks how the total handlers
-  parse and validate `from` and `to`, using a fake store.
+- [storage/db_test.go](storage/db_test.go) checks migration file names and that migrations are
+  applied once.
+- [storage/activity/activity_test.go](storage/activity/activity_test.go) runs submit, list,
+  delete, totals and range bounds against a temporary SQLite database.
+- [pkg/activity](pkg/activity) has one test file per endpoint. Each one sends requests through
+  the real router to the handlers, backed by a fake store.
 
 ## API
 
@@ -176,7 +177,6 @@ Found by running the service against a fresh database. These are not fixed yet.
 | Unknown user | A foreign key failure returns `500` on submit. A total for an unknown user also returns `500`. | `404 Not Found`. |
 | Delete | Deleting an unknown ID returns `500`. | `404 Not Found`; `204 No Content` on success. |
 | Routes | `GET /users` lists submissions and `DELETE /users/{id}` takes a submission ID. | `GET /activities` and `DELETE /activities/{id}`. |
-| Tests | Migrations, totals and date ranges are tested. Submit, list and delete handlers are not. | Handler tests for every endpoint. |
 
 ## Possible improvements
 
