@@ -9,7 +9,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vwiart/assignment/model"
@@ -100,13 +99,8 @@ func TestAggregateHandlers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := &fakeStore{aggregate: model.Aggregate{Total: 42}, err: tt.storeErr}
-			mux := chi.NewMux()
-			a := New(store)
-			mux.Get("/activities/total", a.Aggregate())
-			mux.Get("/users/{user_id}/total", a.AggregateByUser())
-
 			rec := httptest.NewRecorder()
-			mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.target, nil))
+			New(store).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.target, nil))
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			if tt.wantOpts == nil {
