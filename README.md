@@ -36,6 +36,9 @@ the server and delete `data/db*`.
 DATABASE_PATH=/tmp/steps.db go run ./cmd
 ```
 
+On `SIGINT` (Ctrl+C) or `SIGTERM`, the server stops accepting connections, gives in-flight requests
+up to 10 seconds to finish, then closes the database.
+
 ## Tests
 
 ```bash
@@ -193,6 +196,5 @@ with a test.
 ## Possible improvements
 
 - Let users be created, or accept any user ID, depending on how users are managed upstream.
-- Shut down gracefully on `SIGTERM`.
 - Add a simple UI to submit counts and show both totals.
 - Add a per-day rollup table if totals become slow.
