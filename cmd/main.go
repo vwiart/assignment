@@ -24,7 +24,11 @@ func main() {
 
 func startService(ctx context.Context) error {
 	logger := slog.Default()
-	db, err := storage.Open(ctx, "data/db")
+	path := os.Getenv("DATABASE_PATH")
+	if path == "" {
+		path = "data/db"
+	}
+	db, err := storage.Open(ctx, path)
 	if err != nil {
 		return err
 	}
@@ -41,6 +45,6 @@ func startService(ctx context.Context) error {
 		port = "8080"
 	}
 
-	logger.Info("server started", "port", port)
+	logger.Info("server started", "port", port, "database", path)
 	return http.ListenAndServe(fmt.Sprintf(":%s", port), routes)
 }

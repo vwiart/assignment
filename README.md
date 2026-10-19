@@ -28,8 +28,13 @@ SERVER_PORT=9000 go run ./cmd
 ```
 
 Data is stored in a SQLite database at `data/db`, relative to the working directory, so it
-survives restarts. Run the server from the repository root. Migrations run on startup. To start
-from an empty database, stop the server and delete `data/db*`.
+survives restarts. Run the server from the repository root, or set `DATABASE_PATH` to use another
+file. The directory must exist. Migrations run on startup. To start from an empty database, stop
+the server and delete `data/db*`.
+
+```bash
+DATABASE_PATH=/tmp/steps.db go run ./cmd
+```
 
 ## Tests
 
@@ -188,7 +193,6 @@ with a test.
 ## Possible improvements
 
 - Let users be created, or accept any user ID, depending on how users are managed upstream.
-- Make the database path configurable.
 - Shut down gracefully on `SIGTERM`.
 - Add a simple UI to submit counts and show both totals.
 - Add a per-day rollup table if totals become slow.
