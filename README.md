@@ -189,7 +189,16 @@ the boundaries by passing `from` and `to`.
 - **Layers**: HTTP handlers in [pkg/activity](pkg/activity) depend on a `Storage` interface;
   the SQLite implementation is in [storage/activity](storage/activity). The interface lets handlers
   be tested with a fake store.
+- **Store errors** are sentinel values (`ErrUserNotFound`, `ErrActivityNotFound`) that the
+  handlers map to `404`. An unknown user is found with an existence query in the same transaction,
+  not by parsing SQLite's foreign key error. It costs one primary key lookup and keeps the
+  handlers independent of driver error codes.
+- **Pagination** uses the `id` as a cursor (keyset) instead of an offset. Pages stay stable while
+  submissions are added and each page is one index range scan. There is no total count or jump to
+  page N.
 - **Routing** uses [chi](https://github.com/go-chi/chi) for path parameters.
+- **UI** is one HTML file with plain JavaScript, embedded in the binary and calling the same JSON
+  API. There is no build step.
 
 ## Known issues
 
@@ -199,5 +208,8 @@ with a test.
 
 ## Possible improvements
 
+Not done, because they depend on information this assignment does not give:
+
 - Let users be created, or accept any user ID, depending on how users are managed upstream.
-- Add a per-day rollup table if totals become slow.
+- Add a per-day rollup table if totals become slow. At this scale, indexed `SUM` queries are fast
+  enough and always consistent.

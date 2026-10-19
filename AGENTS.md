@@ -25,17 +25,18 @@ go test ./...
 go run ./cmd/main.go
 ```
 
-`go run ./cmd` listens on `SERVER_PORT` (default `8080`) and writes to `data/db` relative to the
-working directory. To try the server without touching the developer's database, run the built
-binary from a scratch directory that contains an empty `data/` folder.
+`go run ./cmd` listens on `SERVER_PORT` (default `8080`) and writes to `DATABASE_PATH` (default
+`data/db`, relative to the working directory). To try the server without touching the developer's
+database, set `DATABASE_PATH` to a file in a scratch directory.
 
 ## Layout
 
 | Path | Role |
 | ---- | ---- |
-| `cmd/main.go` | Wiring: opens the database, runs migrations, registers chi routes. |
+| `cmd/main.go` | Wiring: reads `SERVER_PORT` and `DATABASE_PATH`, opens the database, runs migrations, mounts the UI and activity routes, shuts down on `SIGINT`/`SIGTERM`. |
 | `model/` | Plain structs shared across layers, with JSON tags. |
-| `pkg/activity/` | HTTP handlers, one file per endpoint. Each method returns an `http.HandlerFunc`. Handlers depend on the `Storage` interface in `activity.go`. |
+| `pkg/activity/` | HTTP handlers, one file per endpoint. Each method returns an `http.HandlerFunc`. `activity.go` holds the `Storage` interface, `Routes()` and the `writeJSON`/`writeError` helpers. |
+| `pkg/ui/` | One embedded HTML page served at `/`. |
 | `storage/db.go` | `Open` (SQLite with WAL, foreign keys and busy timeout) and `ApplyMigrations`. |
 | `storage/migrations/` | Embedded SQL migrations. |
 | `storage/activity/` | SQLite implementation of `Storage`. |
@@ -53,8 +54,11 @@ binary from a scratch directory that contains an empty `data/` folder.
   writing or comparing.
 - **Logging** uses `log/slog` through `slog.Default()`. Log the underlying error; send the client
   a short message without internal details.
+- **Responses** go through `writeJSON` and `writeError`, so every body is JSON and every error is
+  `{"error": "..."}`.
 - **Errors** are wrapped with `fmt.Errorf("unable to …: %w", err)` in the storage setup code.
-  Map storage errors to HTTP status codes in the handlers, not in the store.
+  Map storage errors to HTTP status codes in the handlers, not in the store. The store returns
+  sentinel errors such as `ErrUserNotFound` for cases a client can cause.
 - **Doc comments** start with the identifier name.
 
 ## Migrations
