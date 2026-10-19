@@ -3,6 +3,7 @@ package activity
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -61,7 +62,7 @@ func TestSubmitHandler(t *testing.T) {
 			assert.Equal(t, 4200, store.gotActivity.StepCount)
 			assert.True(t, time.Date(2026, 10, 19, 6, 30, 0, 0, time.UTC).Equal(store.gotActivity.Date))
 			if tt.wantStatus == http.StatusOK {
-				assert.JSONEq(t, `{"total":42}`, rec.Body.String())
+				assert.JSONEq(t, fmt.Sprintf(`{"id":%q,"total":42}`, store.gotActivity.ID), rec.Body.String())
 			}
 		})
 	}

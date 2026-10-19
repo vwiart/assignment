@@ -44,8 +44,15 @@ func (a activity) SubmitHandler() http.HandlerFunc {
 			return
 		}
 
-		writeJSON(w, http.StatusOK, aggregate)
+		writeJSON(w, http.StatusOK, submitResponse{ID: activity.ID, Total: aggregate.Total})
 	}
+}
+
+// submitResponse is the body of a successful submission: the ID of the new activity, so the client
+// can delete it later, and the total across all users.
+type submitResponse struct {
+	ID    uuid.UUID `json:"id"`
+	Total int       `json:"total"`
 }
 
 // maxStepCount is the largest step count accepted for one submission. It matches the database

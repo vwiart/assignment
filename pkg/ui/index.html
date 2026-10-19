@@ -170,13 +170,13 @@
       event.preventDefault();
       const fields = submitForm.elements;
       try {
-        const { total } = await request(`/users/${encodeURIComponent(fields.user.value)}`, {
+        const { id, total } = await request(`/users/${encodeURIComponent(fields.user.value)}`, {
           method: "POST",
           body: JSON.stringify({ step_count: Number(fields.steps.value), date: rfc3339(fields.date.value) }),
         });
         refresh();
         reloadPage();
-        show(`Saved. Total across all users: ${total}.`);
+        show(`Saved as ${id}. Total across all users: ${total}.`);
       } catch (err) {
         show(err.message, true);
       }

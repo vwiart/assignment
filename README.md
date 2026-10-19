@@ -70,7 +70,7 @@ error has the same shape:
 
 | Method   | Route                       | Purpose                                                  |
 | -------- | --------------------------- | -------------------------------------------------------- |
-| `POST`   | `/users/{user_id}`          | Submit a step count. Returns the total across all users. |
+| `POST`   | `/users/{user_id}`          | Submit a step count. Returns its ID and the total across all users. |
 | `GET`    | `/activities/total`         | Total steps across all users.                            |
 | `GET`    | `/users/{user_id}/total`    | Total steps for one user.                                |
 | `GET`    | `/activities`               | List submissions, one page at a time.                    |
@@ -86,12 +86,12 @@ curl -X POST localhost:8080/users/alice \
 ```
 
 ```json
-{"total": 4200}
+{"id": "01a15480-2665-7ab8-a1a3-7f309df663d4", "total": 4200}
 ```
 
 | Status | When                                              |
 | ------ | ------------------------------------------------- |
-| `200`  | Stored. The body holds the total across all users. |
+| `200`  | Stored. The body holds the new submission's `id`, to delete it later, and the total across all users. |
 | `400`  | Body is not JSON, `step_count` is not between 1 and 100,000, or `date` is not RFC 3339. |
 | `404`  | The user does not exist. |
 | `500`  | Storage error. |
@@ -238,8 +238,6 @@ That is fixed and tested too. The other findings are now listed under "Assumptio
 
 Agreed in the second review, to be done one at a time:
 
-- **Return the submission ID.** `POST /users/{user_id}` returns only the total, so a client must
-  list submissions to find the ID it needs to delete one. Add the generated `id` to the response.
 - **Explain the routes.** Add a comment to `Routes()`: `/users/...` routes are for one user's
   content (submitting and reading that user's activity), and `/activities/...` routes cover every
   user.
