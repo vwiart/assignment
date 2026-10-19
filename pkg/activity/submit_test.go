@@ -27,6 +27,8 @@ func TestSubmitHandler(t *testing.T) {
 		{name: "stores the activity and returns the total", body: valid, wantStatus: http.StatusOK, wantStored: true},
 		{name: "rejects a body that is not JSON", body: `4200 steps`, wantStatus: http.StatusBadRequest},
 		{name: "rejects a negative step count", body: `{"step_count": -1, "date": "2026-10-19T08:30:00Z"}`, wantStatus: http.StatusBadRequest},
+		{name: "rejects zero steps", body: `{"step_count": 0, "date": "2026-10-19T08:30:00Z"}`, wantStatus: http.StatusBadRequest},
+		{name: "rejects more than 100000 steps", body: `{"step_count": 100001, "date": "2026-10-19T08:30:00Z"}`, wantStatus: http.StatusBadRequest},
 		{name: "rejects a date that is not RFC 3339", body: `{"step_count": 4200, "date": "2026-10-19"}`, wantStatus: http.StatusBadRequest},
 		{name: "returns 500 when the store fails", body: valid, storeErr: errors.New("boom"), wantStatus: http.StatusInternalServerError, wantStored: true},
 	}

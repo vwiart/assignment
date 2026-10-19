@@ -72,7 +72,7 @@ curl -X POST localhost:8080/users/alice \
 | Status | When                                              |
 | ------ | ------------------------------------------------- |
 | `200`  | Stored. The body holds the total across all users. |
-| `400`  | Body is not JSON, `step_count` is negative, or `date` is not RFC 3339. |
+| `400`  | Body is not JSON, `step_count` is not between 1 and 100,000, or `date` is not RFC 3339. |
 | `500`  | Storage error (see [Known issues](#known-issues)). |
 
 ### Get totals
@@ -138,9 +138,9 @@ user an option to manage their activity by allowing them to delete one if they
 made a mistake. The intent is to avoid complex merging implementation that could
 bring more harm than good.
 
-**Invalid or negative step counts.** A negative count is rejected with `400`. The database also
-rejects `0` and anything above 100,000, on the assumption that one submission covers at most one
-day of walking.
+**Invalid or negative step counts.** A count outside 1 to 100,000 is rejected with `400`, on the
+assumption that one submission covers at most one day of walking. A database `CHECK` enforces the
+same range.
 
 **Date ranges with no data.** Return `{"total": 0}`, as do users with no submissions.
 
@@ -173,7 +173,6 @@ Found by running the service against a fresh database. These are not fixed yet.
 
 | Area | Current behaviour | Expected |
 | ---- | ----------------- | -------- |
-| Zero steps | The handler accepts `0`; the database rejects it, so the client gets `500`. | Validate `1..100000` in the handler and return `400`. |
 | Unknown user | A foreign key failure returns `500` on submit. A total for an unknown user also returns `500`. | `404 Not Found`. |
 | Delete | Deleting an unknown ID returns `500`. | `404 Not Found`; `204 No Content` on success. |
 | Routes | `GET /users` lists submissions and `DELETE /users/{id}` takes a submission ID. | `GET /activities` and `DELETE /activities/{id}`. |

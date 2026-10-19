@@ -3,6 +3,7 @@ package activity
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -45,6 +46,10 @@ func (a activity) SubmitHandler() http.HandlerFunc {
 	}
 }
 
+// maxStepCount is the largest step count accepted for one submission. It matches the database
+// CHECK constraint.
+const maxStepCount = 100_000
+
 type submitInput struct {
 	StepCount int    `json:"step_count"`
 	Date      string `json:"date"`
@@ -57,8 +62,8 @@ func (input submitInput) normalize(userID string) (model.Activity, error) {
 	)
 	activity.ID = uuid.NewV7()
 	activity.UserID = userID
-	if input.StepCount < 0 {
-		errs = append(errs, errors.New("step count must be strictly greater than 0"))
+	if input.StepCount < 1 || input.StepCount > maxStepCount {
+		errs = append(errs, fmt.Errorf("step count must be between 1 and %d", maxStepCount))
 	}
 	activity.StepCount = input.StepCount
 	d, err := time.Parse(time.RFC3339, input.Date)
