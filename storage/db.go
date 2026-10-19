@@ -16,6 +16,8 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
+// Open opens the SQLite database at path, creating the file if needed, with foreign keys, WAL mode
+// and a busy timeout. It checks the connection before returning.
 func Open(ctx context.Context, path string) (*sql.DB, error) {
 	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path)
 
@@ -37,6 +39,8 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 	return db, nil
 }
 
+// ApplyMigrations runs the embedded migrations newer than the version in PRAGMA user_version, in
+// order. Each one runs in its own transaction together with the version bump.
 func ApplyMigrations(ctx context.Context, db *sql.DB) error {
 	fsys, err := fs.Sub(migrations, "migrations")
 	if err != nil {

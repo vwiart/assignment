@@ -10,15 +10,21 @@ Users submit a number of steps for a date. Every submission is kept, and the ser
 - the total for one user;
 - either total limited to a date-time range.
 
-## Requirements
+## Prerequisites
 
-- Go **1.27** or newer. The code uses the standard library `uuid` package, which is not in older Go versions.
-- No C toolchain. SQLite runs through [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite), a pure-Go driver.
+Install these before running the service or the tests:
+
+- Go **1.27** or newer, from <https://go.dev/dl/>. Check it with `go version`. The code uses the
+  standard library `uuid` package, which is not in older Go versions.
+
+Nothing else is needed. There is no C toolchain to install: SQLite runs through
+[`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite), a pure-Go driver, and Go downloads
+the dependencies on the first build.
 
 ## Running
 
 ```bash
-go run ./cmd
+go run cmd/main.go
 ```
 
 The server listens on port `8080`. Open <http://localhost:8080/> for a small page that submits
@@ -29,7 +35,7 @@ table reloads its current page after a submission or a deletion, so it stays ful
 `SERVER_PORT` to use another port:
 
 ```bash
-SERVER_PORT=9000 go run ./cmd
+SERVER_PORT=9000 go run cmd/main.go
 ```
 
 Data is stored in a SQLite database at `data/db`, relative to the working directory, so it
@@ -38,7 +44,7 @@ file. The directory must exist. Migrations run on startup. To start from an empt
 the server and delete `data/db*`.
 
 ```bash
-DATABASE_PATH=/tmp/steps.db go run ./cmd
+DATABASE_PATH=/tmp/steps.db go run cmd/main.go
 ```
 
 On `SIGINT` (Ctrl+C) or `SIGTERM`, the server stops accepting connections, gives in-flight requests
@@ -238,9 +244,6 @@ That is fixed and tested too. The other findings are now listed under "Assumptio
 
 Agreed in the second review, to be done one at a time:
 
-- **Align the run command and the requirements.** README and `AGENTS.md` should both use
-  `go run cmd/main.go`. List the requirements to install before running, starting with Go 1.27.
-- **Add the missing doc comments** on `storage.Open` and `storage.ApplyMigrations`.
 - **Log levels.** Log validation failures (`400`) at `WARN` instead of `ERROR`, and log
   successful responses at `INFO`.
 - **Exit cleanly on startup failure.** Replace `panic` in `main` with an error log and

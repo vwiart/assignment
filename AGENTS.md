@@ -22,10 +22,10 @@ from Known issues once it is fixed and tested.
 go build ./...
 go vet ./...
 go test ./...
-go run ./cmd/main.go
+go run cmd/main.go
 ```
 
-`go run ./cmd` listens on `SERVER_PORT` (default `8080`) and writes to `DATABASE_PATH` (default
+`go run cmd/main.go` listens on `SERVER_PORT` (default `8080`) and writes to `DATABASE_PATH` (default
 `data/db`, relative to the working directory). To try the server without touching the developer's
 database, set `DATABASE_PATH` to a file in a scratch directory.
 
