@@ -114,33 +114,37 @@ func TestSubmit(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	alice := model.Activity{
-		ID:        uuid.NewV7(),
+	store := newStore(t)
+	first := model.Activity{
+		ID:        uuid.MustParse("01a15480-0000-7000-8000-000000000001"),
 		UserID:    "alice",
 		Date:      time.Date(2026, 10, 19, 8, 30, 0, 0, time.FixedZone("CEST", 2*60*60)),
 		StepCount: 100,
 	}
-	bob := model.Activity{ID: uuid.NewV7(), UserID: "bob", Date: time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), StepCount: 7}
-	aliceUTC := alice
-	aliceUTC.Date = alice.Date.UTC()
+	second := model.Activity{ID: uuid.MustParse("01a15480-0000-7000-8000-000000000002"), UserID: "bob", Date: time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), StepCount: 7}
+	third := model.Activity{ID: uuid.MustParse("01a15480-0000-7000-8000-000000000003"), UserID: "charles", Date: time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC), StepCount: 1}
+	// Submitted out of order to check that the list is sorted by ID.
+	for _, a := range []model.Activity{third, first, second} {
+		_, err := store.Submit(t.Context(), a)
+		require.NoError(t, err)
+	}
+	firstUTC := first
+	firstUTC.Date = first.Date.UTC()
 
 	tests := []struct {
 		name string
-		seed []model.Activity
+		opts ListOptions
 		want []model.Activity
 	}{
-		{name: "returns nothing without activities"},
-		{name: "returns every activity with its date in UTC", seed: []model.Activity{alice, bob}, want: []model.Activity{aliceUTC, bob}},
+		{name: "returns every activity ordered by ID with dates in UTC", want: []model.Activity{firstUTC, second, third}},
+		{name: "returns at most limit activities", opts: ListOptions{Limit: 2}, want: []model.Activity{firstUTC, second}},
+		{name: "returns the activities after the cursor", opts: ListOptions{After: first.ID}, want: []model.Activity{second, third}},
+		{name: "combines limit and cursor", opts: ListOptions{Limit: 1, After: first.ID}, want: []model.Activity{second}},
+		{name: "returns nothing after the last activity", opts: ListOptions{After: third.ID}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := newStore(t)
-			for _, a := range tt.seed {
-				_, err := store.Submit(t.Context(), a)
-				require.NoError(t, err)
-			}
-
-			got, err := store.List(t.Context())
+			got, err := store.List(t.Context(), tt.opts)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

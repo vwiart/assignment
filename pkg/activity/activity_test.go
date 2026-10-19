@@ -15,6 +15,7 @@ type fakeStore struct {
 	err        error
 
 	gotOpts     *storage.AggregateOptions
+	gotListOpts *storage.ListOptions
 	gotActivity *model.Activity
 	gotID       *uuid.UUID
 }
@@ -29,7 +30,8 @@ func (f *fakeStore) Delete(_ context.Context, id uuid.UUID) error {
 	return f.err
 }
 
-func (f *fakeStore) List(context.Context) ([]model.Activity, error) {
+func (f *fakeStore) List(_ context.Context, opts storage.ListOptions) ([]model.Activity, error) {
+	f.gotListOpts = &opts
 	return f.activities, f.err
 }
 

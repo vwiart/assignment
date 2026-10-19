@@ -58,7 +58,7 @@ error has the same shape:
 | `POST`   | `/users/{user_id}`          | Submit a step count. Returns the total across all users. |
 | `GET`    | `/activities/total`         | Total steps across all users.                            |
 | `GET`    | `/users/{user_id}/total`    | Total steps for one user.                                |
-| `GET`    | `/activities`               | List every submission.                                   |
+| `GET`    | `/activities`               | List submissions, one page at a time.                    |
 | `DELETE` | `/activities/{activity_id}` | Delete one submission.                                   |
 
 Both `total` routes accept optional `from` and `to` query parameters to limit the range.
@@ -118,10 +118,14 @@ Offsets of `Z` or `-hh:mm` need no encoding.
 
 ```bash
 curl localhost:8080/activities
+curl 'localhost:8080/activities?limit=50&after=01a15480-2665-7ab8-a1a3-7f309df663d4'
 curl -X DELETE localhost:8080/activities/01a15480-2665-7ab8-a1a3-7f309df663d4
 ```
 
-`GET /activities` returns `204 No Content` when there are no submissions. `DELETE` returns
+`GET /activities` returns submissions ordered by `id`. IDs are UUIDv7, so this is also
+submission order. `limit` sets the page size (default 100, at most 1,000). To get the next page,
+pass the last `id` of the current page as `after`. An invalid `limit` or `after` returns `400`, and
+a page with no submissions returns `204 No Content`. `DELETE` returns
 `204 No Content` on success, `400` when the ID is not a UUID and `404` when no submission has
 that ID.
 
@@ -183,7 +187,6 @@ with a test.
 
 ## Possible improvements
 
-- Add pagination to the submission list.
 - Let users be created, or accept any user ID, depending on how users are managed upstream.
 - Make the database path configurable.
 - Shut down gracefully on `SIGTERM`.

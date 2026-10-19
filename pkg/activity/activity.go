@@ -25,7 +25,7 @@ func New(s Storage) activity {
 type Storage interface {
 	Aggregate(ctx context.Context, opts storage.AggregateOptions) (model.Aggregate, error)
 	Delete(ctx context.Context, activityID uuid.UUID) error
-	List(ctx context.Context) ([]model.Activity, error)
+	List(ctx context.Context, opts storage.ListOptions) ([]model.Activity, error)
 	Submit(ctx context.Context, activity model.Activity) (model.Aggregate, error)
 }
 

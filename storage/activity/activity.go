@@ -106,15 +106,39 @@ func (a activity) Delete(ctx context.Context, activityID uuid.UUID) error {
 	}
 }
 
-// List lists all activities.
-func (a activity) List(ctx context.Context) ([]model.Activity, error) {
-	var query strings.Builder
+// ListOptions defines how to page through activities. A zero Limit returns every activity.
+type ListOptions struct {
+	Limit int
+	After uuid.UUID
+}
+
+// List lists activities ordered by ID, which is also submission order since IDs are UUIDv7.
+func (a activity) List(ctx context.Context, opts ListOptions) ([]model.Activity, error) {
+	var (
+		query strings.Builder
+		args  []any
+	)
 	query.WriteString(`
 		SELECT id, user_id, date, step_count
 		FROM activity
 		WHERE 1=1
 	`)
-	rows, err := a.db.QueryContext(ctx, query.String())
+	if opts.After != uuid.Nil() {
+		query.WriteString(`
+			AND id > ?
+		`)
+		args = append(args, opts.After.String())
+	}
+	query.WriteString(`
+		ORDER BY id
+	`)
+	if opts.Limit > 0 {
+		query.WriteString(`
+			LIMIT ?
+		`)
+		args = append(args, opts.Limit)
+	}
+	rows, err := a.db.QueryContext(ctx, query.String(), args...)
 	if err != nil {
 		return nil, err
 	}
