@@ -3,6 +3,7 @@ module github.com/vwiart/assignment
 go 1.27.2
 
 require (
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/stretchr/testify v1.12.1
 	modernc.org/sqlite v1.60.1
 )

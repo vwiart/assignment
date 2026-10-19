@@ -50,12 +50,3 @@ func userVersion(t *testing.T, conn *sql.DB) int {
 	require.NoError(t, conn.QueryRowContext(t.Context(), "PRAGMA user_version").Scan(&version))
 	return version
 }
-
-func tableExists(t *testing.T, conn *sql.DB, name string) bool {
-	t.Helper()
-	var count int
-	err := conn.QueryRowContext(t.Context(),
-		"SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?", name).Scan(&count)
-	require.NoError(t, err)
-	return count == 1
-}
