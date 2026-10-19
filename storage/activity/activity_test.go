@@ -204,7 +204,7 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func newStore(t *testing.T) activity {
+func newStore(t *testing.T) Activity {
 	t.Helper()
 	conn, err := db.Open(t.Context(), filepath.Join(t.TempDir(), "db"))
 	require.NoError(t, err)
@@ -213,7 +213,7 @@ func newStore(t *testing.T) activity {
 	return NewActivity(conn)
 }
 
-func submit(t *testing.T, store activity, userID, date string, steps int) model.Aggregate {
+func submit(t *testing.T, store Activity, userID, date string, steps int) model.Aggregate {
 	t.Helper()
 	agg, err := store.Submit(t.Context(), model.Activity{
 		ID:        uuid.NewV7(),

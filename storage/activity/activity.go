@@ -17,13 +17,14 @@ var ErrUserNotFound = errors.New("user not found")
 // ErrActivityNotFound is returned when an operation refers to an activity that does not exist.
 var ErrActivityNotFound = errors.New("activity not found")
 
-type activity struct {
+// Activity stores activities in SQLite and computes their totals.
+type Activity struct {
 	db *sql.DB
 }
 
-// NewActivity instantiates a new activity repository
-func NewActivity(db *sql.DB) activity {
-	return activity{db: db}
+// NewActivity returns an Activity store backed by db, which must have the migrations applied.
+func NewActivity(db *sql.DB) Activity {
+	return Activity{db: db}
 }
 
 // AggregateOptions defines which options are available to aggregate activities.
@@ -33,7 +34,7 @@ type AggregateOptions struct {
 }
 
 // Aggregate aggregates the activities for the given input.
-func (a activity) Aggregate(ctx context.Context, opts AggregateOptions) (model.Aggregate, error) {
+func (a Activity) Aggregate(ctx context.Context, opts AggregateOptions) (model.Aggregate, error) {
 	tx, err := a.db.BeginTx(ctx, nil)
 	if err != nil {
 		return model.Aggregate{}, err
@@ -47,7 +48,7 @@ func (a activity) Aggregate(ctx context.Context, opts AggregateOptions) (model.A
 	return agg, tx.Commit()
 }
 
-func (a activity) aggregate(ctx context.Context, tx *sql.Tx, opts AggregateOptions) (model.Aggregate, error) {
+func (a Activity) aggregate(ctx context.Context, tx *sql.Tx, opts AggregateOptions) (model.Aggregate, error) {
 	if opts.UserID != "" {
 		if err := userExists(ctx, tx, opts.UserID); err != nil {
 			return model.Aggregate{}, err
@@ -88,7 +89,7 @@ func (a activity) aggregate(ctx context.Context, tx *sql.Tx, opts AggregateOptio
 }
 
 // Delete deletes an activity.
-func (a activity) Delete(ctx context.Context, activityID uuid.UUID) error {
+func (a Activity) Delete(ctx context.Context, activityID uuid.UUID) error {
 	rs, err := a.db.ExecContext(ctx, `DELETE FROM activity WHERE id = ?`, activityID)
 	if err != nil {
 		return err
@@ -113,7 +114,7 @@ type ListOptions struct {
 }
 
 // List lists activities ordered by ID, which is also submission order since IDs are UUIDv7.
-func (a activity) List(ctx context.Context, opts ListOptions) ([]model.Activity, error) {
+func (a Activity) List(ctx context.Context, opts ListOptions) ([]model.Activity, error) {
 	var (
 		query strings.Builder
 		args  []any
@@ -176,7 +177,7 @@ func (a activity) List(ctx context.Context, opts ListOptions) ([]model.Activity,
 }
 
 // Submit submits an activity and return the updated aggregates.
-func (a activity) Submit(ctx context.Context, activity model.Activity) (model.Aggregate, error) {
+func (a Activity) Submit(ctx context.Context, activity model.Activity) (model.Aggregate, error) {
 	tx, err := a.db.BeginTx(ctx, nil)
 	if err != nil {
 		return model.Aggregate{}, err
