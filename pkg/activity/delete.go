@@ -1,11 +1,13 @@
 package activity
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"uuid"
 
 	"github.com/go-chi/chi/v5"
+	storage "github.com/vwiart/assignment/storage/activity"
 )
 
 // DeleteHandler is an endpoint to delete an activity.
@@ -20,11 +22,17 @@ func (a activity) DeleteHandler() http.HandlerFunc {
 			http.Error(w, "invalid input", http.StatusBadRequest)
 			return
 		}
-		if err := a.store.Delete(ctx, id); err != nil {
+		err = a.store.Delete(ctx, id)
+		if errors.Is(err, storage.ErrActivityNotFound) {
+			logger.Error("failed to delete", "err", err)
+			http.Error(w, "activity not found", http.StatusNotFound)
+			return
+		}
+		if err != nil {
 			logger.Error("failed to delete", "err", err)
 			http.Error(w, "failed to delete", http.StatusInternalServerError)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }

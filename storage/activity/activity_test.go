@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"database/sql"
 	"path/filepath"
 	"testing"
 	"time"
@@ -157,8 +156,8 @@ func TestDelete(t *testing.T) {
 		wantTotal int
 	}{
 		{name: "deletes one activity", id: deleted.ID, wantTotal: 100},
-		{name: "returns ErrNoRows for an activity already deleted", id: deleted.ID, wantErr: sql.ErrNoRows, wantTotal: 100},
-		{name: "returns ErrNoRows for an unknown activity", id: uuid.NewV7(), wantErr: sql.ErrNoRows, wantTotal: 100},
+		{name: "returns ErrActivityNotFound for an activity already deleted", id: deleted.ID, wantErr: ErrActivityNotFound, wantTotal: 100},
+		{name: "returns ErrActivityNotFound for an unknown activity", id: uuid.NewV7(), wantErr: ErrActivityNotFound, wantTotal: 100},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

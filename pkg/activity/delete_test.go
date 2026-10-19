@@ -8,6 +8,7 @@ import (
 	"uuid"
 
 	"github.com/stretchr/testify/assert"
+	storage "github.com/vwiart/assignment/storage/activity"
 )
 
 func TestDeleteHandler(t *testing.T) {
@@ -20,8 +21,9 @@ func TestDeleteHandler(t *testing.T) {
 		wantStatus int
 		wantID     *uuid.UUID
 	}{
-		{name: "deletes the activity", target: "/users/" + id.String(), wantStatus: http.StatusOK, wantID: &id},
+		{name: "deletes the activity", target: "/users/" + id.String(), wantStatus: http.StatusNoContent, wantID: &id},
 		{name: "rejects an id that is not a UUID", target: "/users/42", wantStatus: http.StatusBadRequest},
+		{name: "returns 404 for an unknown activity", target: "/users/" + id.String(), storeErr: storage.ErrActivityNotFound, wantStatus: http.StatusNotFound, wantID: &id},
 		{name: "returns 500 when the store fails", target: "/users/" + id.String(), storeErr: errors.New("boom"), wantStatus: http.StatusInternalServerError, wantID: &id},
 	}
 	for _, tt := range tests {

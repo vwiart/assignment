@@ -14,6 +14,9 @@ import (
 // ErrUserNotFound is returned when an operation refers to a user that does not exist.
 var ErrUserNotFound = errors.New("user not found")
 
+// ErrActivityNotFound is returned when an operation refers to an activity that does not exist.
+var ErrActivityNotFound = errors.New("activity not found")
+
 type activity struct {
 	db *sql.DB
 }
@@ -99,7 +102,7 @@ func (a activity) Delete(ctx context.Context, activityID uuid.UUID) error {
 	case err != nil:
 		return err
 	case v == 0:
-		return sql.ErrNoRows
+		return ErrActivityNotFound
 	case v == 1:
 		return nil
 	default:

@@ -116,7 +116,9 @@ curl localhost:8080/users
 curl -X DELETE localhost:8080/users/01a15480-2665-7ab8-a1a3-7f309df663d4
 ```
 
-`GET /users` returns `204 No Content` when there are no submissions.
+`GET /users` returns `204 No Content` when there are no submissions. `DELETE` returns
+`204 No Content` on success, `400` when the ID is not a UUID and `404` when no submission has
+that ID.
 
 ## Data model
 
@@ -174,7 +176,6 @@ Found by running the service against a fresh database. These are not fixed yet.
 
 | Area | Current behaviour | Expected |
 | ---- | ----------------- | -------- |
-| Delete | Deleting an unknown ID returns `500`. | `404 Not Found`; `204 No Content` on success. |
 | Routes | `GET /users` lists submissions and `DELETE /users/{id}` takes a submission ID. | `GET /activities` and `DELETE /activities/{id}`. |
 
 ## Possible improvements
