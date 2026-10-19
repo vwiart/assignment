@@ -165,9 +165,25 @@ user an option to manage their activity by allowing them to delete one if they
 made a mistake. The intent is to avoid complex merging implementation that could
 bring more harm than good.
 
+The brief's "each submission should be retained" is read together with "a user may submit
+multiple step counts on the same day": two submissions on the same day are both kept and both
+counted. Deleting a submission is a separate, explicit correction made by the user, so it does not
+go against that rule.
+
 **Invalid or negative step counts.** A count outside 1 to 100,000 is rejected with `400`, on the
 assumption that one submission covers at most one day of walking. A database `CHECK` enforces the
 same range.
+
+**Other input checks are loose on purpose.** A submission is accepted when:
+
+- the body has data after the JSON object: `{...}{garbage}` returns `200`, and only the first
+  object is read;
+- the body has unknown fields, such as `"extra": 1`, which are ignored;
+- the date is far in the future or the past. Any RFC 3339 timestamp is stored, from year `0001`
+  to `9999`.
+
+The brief does not say how strict the service should be, so only what the totals depend on is
+checked: a step count in range, a valid timestamp and a known user.
 
 **Date ranges with no data.** Return `{"total": 0}`, as do users with no submissions.
 
@@ -177,6 +193,12 @@ returns `404`. The foreign key on `activity.user_id` is a second guard.
 **Time zones and date boundaries.** Clients send a full timestamp with an offset. The server
 converts it to UTC before storing it. A "day" is not defined on the server; the client chooses
 the boundaries by passing `from` and `to`.
+
+Dates are compared to the second. Submission dates and the `from`/`to` bounds are written with
+`time.RFC3339`, which drops fractions of a second. A bound such as `10:00:00.500Z` therefore acts
+as `10:00:00Z`, and a submission at `10:00:00.200Z` counts as being at `10:00:00Z`. This case is
+not handled. (The comment in `0001_init.sql` gives the format as `.000Z`; the code does not write
+milliseconds.)
 
 ## Design decisions and trade-offs
 
@@ -209,23 +231,8 @@ the boundaries by passing `from` and `to`.
 
 The issues found by running the first draft against a fresh database (zero steps, unknown users,
 deleting an unknown submission, submission routes under `/users`) are fixed, each with a test.
-A second review against the brief found the following. They will be fixed one at a time.
-
-- **Retention and deletion are not explained.** "Each submission should be retained" is read
-  together with "a user may submit multiple step counts on the same day": two submissions on the
-  same day are both kept and both counted. Deleting a submission is a separate, explicit
-  correction by the user. Add this to "Assumptions".
-- **Loose input checks are not documented.** A submission is accepted when:
-  - the body has data after the JSON object (`{...}{garbage}` returns `200`);
-  - the body has unknown fields (`"extra": 1` is ignored);
-  - the date is in the far future or past (years `2999` and `0001` are stored).
-
-  These are kept as they are. Document them in "Assumptions".
-- **Sub-second precision is dropped.** Dates and `from`/`to` are written with `time.RFC3339`,
-  which drops fractions of a second. A bound with milliseconds can then include or exclude a
-  submission from the same second by mistake. The comment in `0001_init.sql` gives the format
-  as `2006-01-02T15:04:05.000Z`, which does not match. This case is not handled: document that
-  dates are compared to the second.
+A second review against the brief found that concurrent submissions failed with `SQLITE_BUSY`.
+That is fixed and tested too. The other findings are now listed under "Assumptions".
 
 ## Possible improvements
 
