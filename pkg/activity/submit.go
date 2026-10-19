@@ -20,7 +20,13 @@ func (a Handler) SubmitHandler() http.HandlerFunc {
 		ctx := r.Context()
 		logger := slog.Default()
 		var input submitInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBodySize)).Decode(&input)
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			logger.Warn("body too large", "err", err)
+			writeError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("body must be at most %d bytes", maxBodySize))
+			return
+		}
+		if err != nil {
 			logger.Warn("failed to decode body", "err", err)
 			writeError(w, http.StatusBadRequest, "unable to decode body")
 			return
@@ -55,6 +61,9 @@ type submitResponse struct {
 	ID    uuid.UUID `json:"id"`
 	Total int       `json:"total"`
 }
+
+// maxBodySize is the largest submission body accepted, in bytes. A valid body is under 100 bytes.
+const maxBodySize = 1 << 10
 
 // maxStepCount is the largest step count accepted for one submission. It matches the database
 // CHECK constraint.
