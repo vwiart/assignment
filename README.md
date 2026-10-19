@@ -23,7 +23,10 @@ go run ./cmd
 
 The server listens on port `8080`. Open <http://localhost:8080/> for a small page that submits
 step counts and shows the total across all users and the total for one user, optionally limited
-to a date range. Set `SERVER_PORT` to use another port:
+to a date range. It also lists submissions in a table, 20 per page and ordered by ID, with a
+button to fetch the next page and a button on each row to delete it after a confirmation. The
+table reloads its current page after a submission or a deletion, so it stays full. Set
+`SERVER_PORT` to use another port:
 
 ```bash
 SERVER_PORT=9000 go run ./cmd

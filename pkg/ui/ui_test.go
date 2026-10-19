@@ -16,5 +16,6 @@ func TestHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "text/html; charset=utf-8", rec.Header().Get("Content-Type"))
 		assert.Contains(t, rec.Body.String(), `<form id="submit">`)
+		assert.Contains(t, rec.Body.String(), `<tbody id="activities">`)
 	})
 }

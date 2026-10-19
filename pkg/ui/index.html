@@ -5,13 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Step counts</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; color: #222; }
-    form { display: grid; gap: .75rem; margin-bottom: 1.5rem; }
+    body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    form { display: grid; gap: .75rem; margin-bottom: 1.5rem; max-width: 32rem; }
     label { display: grid; gap: .25rem; }
     input, button { font: inherit; padding: .4rem; }
     dl { display: grid; grid-template-columns: auto 1fr; gap: .5rem 1rem; }
     dd { margin: 0; font-weight: bold; }
     .error { color: #b00020; }
+    .scroll { overflow-x: auto; margin-bottom: .75rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: .3rem .5rem; border-bottom: 1px solid #ddd; text-align: left; white-space: nowrap; }
+    td:first-child { font-family: ui-monospace, monospace; font-size: .85em; }
   </style>
 </head>
 <body>
@@ -37,10 +41,29 @@
     <dt id="user-label">alice</dt><dd id="user-total">-</dd>
   </dl>
 
+  <h2>Activities</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>ID</th><th>User</th><th>Date</th><th>Steps</th><th></th></tr></thead>
+      <tbody id="activities"></tbody>
+    </table>
+  </div>
+  <button id="first-page" type="button">First page</button>
+  <button id="next-page" type="button">Next page</button>
+
   <script>
     const submitForm = document.getElementById("submit");
     const rangeForm = document.getElementById("range");
     const message = document.getElementById("message");
+    const rows = document.getElementById("activities");
+    const nextButton = document.getElementById("next-page");
+
+    // pageSize is the number of activities in the table.
+    const pageSize = 20;
+    // pageStart is the cursor of the page on screen: the ID it starts after, or "" for the first
+    // page. pageEnd is the ID of its last row.
+    let pageStart = "";
+    let pageEnd = "";
 
     // rfc3339 converts a datetime-local value, read in the browser's time zone, to UTC RFC 3339.
     const rfc3339 = (value) => new Date(value).toISOString();
@@ -52,6 +75,7 @@
 
     async function request(url, options) {
       const res = await fetch(url, options);
+      if (res.status === 204) return null;
       const body = await res.json();
       if (!res.ok) throw new Error(body.error);
       return body;
@@ -76,6 +100,72 @@
       }
     }
 
+    // loadPage shows the page of activities after the given ID ("" for the first page), ordered by
+    // ID. It returns false and leaves the table as it is when a page other than the first is empty.
+    async function loadPage(after) {
+      const params = new URLSearchParams({ limit: pageSize });
+      if (after) params.set("after", after);
+      const activities = (await request("/activities?" + params)) ?? [];
+      if (activities.length === 0 && after) return false;
+
+      pageStart = after;
+      pageEnd = activities.at(-1)?.id ?? "";
+      rows.replaceChildren(...activities.map(activityRow));
+      if (activities.length === 0) rows.insertRow().insertCell().append("No activities yet.");
+      nextButton.disabled = activities.length < pageSize;
+      return true;
+    }
+
+    // reloadPage loads the page on screen again, so it holds pageSize rows after an activity is
+    // added or deleted. It falls back to the first page if the page on screen is now empty.
+    async function reloadPage() {
+      try {
+        if (!(await loadPage(pageStart))) await loadPage("");
+      } catch (err) {
+        show(err.message, true);
+      }
+    }
+
+    function activityRow(activity) {
+      const row = document.createElement("tr");
+      for (const value of [activity.id, activity.user_id, new Date(activity.date).toLocaleString(), activity.step_count]) {
+        row.insertCell().textContent = value;
+      }
+      const button = document.createElement("button");
+      button.textContent = "Delete";
+      button.addEventListener("click", () => remove(activity));
+      row.insertCell().append(button);
+      return row;
+    }
+
+    async function remove(activity) {
+      const date = new Date(activity.date).toLocaleString();
+      if (!confirm(`Delete ${activity.step_count} steps by ${activity.user_id} on ${date}?`)) return;
+      try {
+        await request(`/activities/${activity.id}`, { method: "DELETE" });
+        refresh();
+        reloadPage();
+        show("Deleted.");
+      } catch (err) {
+        show(err.message, true);
+      }
+    }
+
+    nextButton.addEventListener("click", async () => {
+      try {
+        if (!(await loadPage(pageEnd))) {
+          nextButton.disabled = true;
+          show("No more activities.");
+        }
+      } catch (err) {
+        show(err.message, true);
+      }
+    });
+    document.getElementById("first-page").addEventListener("click", () => {
+      pageStart = "";
+      reloadPage();
+    });
+
     submitForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const fields = submitForm.elements;
@@ -85,6 +175,7 @@
           body: JSON.stringify({ step_count: Number(fields.steps.value), date: rfc3339(fields.date.value) }),
         });
         refresh();
+        reloadPage();
         show(`Saved. Total across all users: ${total}.`);
       } catch (err) {
         show(err.message, true);
@@ -100,6 +191,7 @@
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     submitForm.elements.date.value = now.toISOString().slice(0, 16);
     refresh();
+    reloadPage();
   </script>
 </body>
 </html>
