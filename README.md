@@ -48,13 +48,13 @@ go test ./...
 
 All bodies are JSON. Dates use RFC 3339.
 
-| Method   | Route                   | Purpose                                                  |
-| -------- | ----------------------- | -------------------------------------------------------- |
-| `POST`   | `/users/{user_id}`      | Submit a step count. Returns the total across all users. |
-| `GET`    | `/activities/total`     | Total steps across all users.                            |
-| `GET`    | `/users/{user_id}/total`| Total steps for one user.                                |
-| `GET`    | `/users`                | List every submission.                                   |
-| `DELETE` | `/users/{activity_id}`  | Delete one submission.                                   |
+| Method   | Route                       | Purpose                                                  |
+| -------- | --------------------------- | -------------------------------------------------------- |
+| `POST`   | `/users/{user_id}`          | Submit a step count. Returns the total across all users. |
+| `GET`    | `/activities/total`         | Total steps across all users.                            |
+| `GET`    | `/users/{user_id}/total`    | Total steps for one user.                                |
+| `GET`    | `/activities`               | List every submission.                                   |
+| `DELETE` | `/activities/{activity_id}` | Delete one submission.                                   |
 
 Both `total` routes accept optional `from` and `to` query parameters to limit the range.
 
@@ -112,11 +112,11 @@ Offsets of `Z` or `-hh:mm` need no encoding.
 ### List and delete submissions
 
 ```bash
-curl localhost:8080/users
-curl -X DELETE localhost:8080/users/01a15480-2665-7ab8-a1a3-7f309df663d4
+curl localhost:8080/activities
+curl -X DELETE localhost:8080/activities/01a15480-2665-7ab8-a1a3-7f309df663d4
 ```
 
-`GET /users` returns `204 No Content` when there are no submissions. `DELETE` returns
+`GET /activities` returns `204 No Content` when there are no submissions. `DELETE` returns
 `204 No Content` on success, `400` when the ID is not a UUID and `404` when no submission has
 that ID.
 
@@ -172,15 +172,12 @@ the boundaries by passing `from` and `to`.
 
 ## Known issues
 
-Found by running the service against a fresh database. These are not fixed yet.
-
-| Area | Current behaviour | Expected |
-| ---- | ----------------- | -------- |
-| Routes | `GET /users` lists submissions and `DELETE /users/{id}` takes a submission ID. | `GET /activities` and `DELETE /activities/{id}`. |
+None known. The issues found by running the first draft against a fresh database (zero steps,
+unknown users, deleting an unknown submission, submission routes under `/users`) are fixed, each
+with a test.
 
 ## Possible improvements
 
-- Fix the known issues above, with a test for each.
 - Return errors as JSON with a stable shape, and set `Content-Type: application/json`.
 - Add pagination to the submission list.
 - Let users be created, or accept any user ID, depending on how users are managed upstream.

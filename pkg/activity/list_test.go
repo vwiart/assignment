@@ -41,7 +41,7 @@ func TestListHandler(t *testing.T) {
 			store := &fakeStore{activities: tt.activities, err: tt.storeErr}
 
 			rec := httptest.NewRecorder()
-			New(store).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/users", nil))
+			New(store).Routes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/activities", nil))
 
 			assert.Equal(t, tt.wantStatus, rec.Code)
 			switch tt.wantStatus {

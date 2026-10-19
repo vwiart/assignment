@@ -30,10 +30,10 @@ type Storage interface {
 // Routes returns a router serving every activity endpoint.
 func (a activity) Routes() http.Handler {
 	mux := chi.NewMux()
+	mux.Get("/activities", a.ListHandler())
 	mux.Get("/activities/total", a.Aggregate())
-	mux.Get("/users", a.ListHandler())
+	mux.Delete("/activities/{activity_id}", a.DeleteHandler())
 	mux.Post("/users/{user_id}", a.SubmitHandler())
 	mux.Get("/users/{user_id}/total", a.AggregateByUser())
-	mux.Delete("/users/{activity_id}", a.DeleteHandler())
 	return mux
 }
