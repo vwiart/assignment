@@ -100,7 +100,9 @@ curl -X POST localhost:8080/users/alice \
 | `200`  | Stored. The body holds the new submission's `id`, to delete it later, and the total across all users. |
 | `400`  | Body is not JSON, `step_count` is not between 1 and 100,000, or `date` is not RFC 3339. |
 | `404`  | The user does not exist. |
+| `413`  | Body is over 1 KiB. |
 | `500`  | Storage error. |
+| `503`  | The request took more than 100 ms (see below). |
 
 ### Get totals
 
@@ -149,6 +151,14 @@ pass the last `id` of the current page as `after`. An invalid `limit` or `after`
 a page with no submissions returns `204 No Content`. `DELETE` returns
 `204 No Content` on success, `400` when the ID is not a UUID and `404` when no submission has
 that ID.
+
+### Timeouts
+
+Every request has 100 ms: to be read, and to be handled. A request that takes longer gets
+`503` with `{"error":"request timed out"}`. That body is sent as `text/plain`, because Go's
+`http.TimeoutHandler` writes it. The request's context is cancelled, so a query still waiting for
+the database stops. There is no retry, so the client decides whether to send the request again.
+Connections are kept open for 60 seconds between requests.
 
 ## Data model
 
@@ -230,6 +240,10 @@ milliseconds.)
   submissions are added and each page is one index range scan. There is no total count or jump to
   page N.
 - **Routing** uses [chi](https://github.com/go-chi/chi) for path parameters.
+- **Timeouts** are short (100 ms) and fail hard with `503`, without retries. A submission whose
+  transaction commits just as the timeout fires is stored even though the client sees `503`. A
+  client that sends it again counts the steps twice. Returning the new `id` lets the client check
+  the list before it sends a submission again.
 - **UI** is one HTML file with plain JavaScript, embedded in the binary and calling the same JSON
   API. There is no build step.
 
@@ -241,12 +255,6 @@ A second review against the brief found that concurrent submissions failed with 
 That is fixed and tested too. The other findings are now listed under "Assumptions".
 
 ## Possible improvements
-
-Agreed in the second review, to be done one at a time:
-
-- **Limit request bodies and set server timeouts.** Cap request bodies at a small size with
-  `http.MaxBytesReader`. Set read, write and idle timeouts on the `http.Server` (about 100 ms for
-  requests). There is no retry: a request that runs over the timeout fails.
 
 Not done, because they depend on information this assignment does not give:
 

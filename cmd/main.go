@@ -17,8 +17,15 @@ import (
 	store "github.com/vwiart/assignment/storage/activity"
 )
 
-// shutdownTimeout is how long in-flight requests have to finish after SIGINT or SIGTERM.
-const shutdownTimeout = 10 * time.Second
+const (
+	// shutdownTimeout is how long in-flight requests have to finish after SIGINT or SIGTERM.
+	shutdownTimeout = 10 * time.Second
+	// requestTimeout is how long a client has to send a request and the server has to answer it.
+	// A request that runs over gets a 503 and its context is cancelled. There is no retry.
+	requestTimeout = 100 * time.Millisecond
+	// idleTimeout is how long a keep-alive connection stays open between requests.
+	idleTimeout = 60 * time.Second
+)
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -56,7 +63,15 @@ func startService(ctx context.Context) error {
 		port = "8080"
 	}
 
-	server := &http.Server{Addr: fmt.Sprintf(":%s", port), Handler: routes}
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%s", port),
+		Handler:           http.TimeoutHandler(routes, requestTimeout, `{"error":"request timed out"}`),
+		ReadHeaderTimeout: requestTimeout,
+		ReadTimeout:       requestTimeout,
+		// WriteTimeout is longer than requestTimeout so the 503 from TimeoutHandler can be sent.
+		WriteTimeout: 2 * requestTimeout,
+		IdleTimeout:  idleTimeout,
+	}
 	errs := make(chan error, 1)
 	go func() { errs <- server.ListenAndServe() }()
 	logger.Info("server started", "port", port, "database", path)
