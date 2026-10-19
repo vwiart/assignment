@@ -205,11 +205,54 @@ the boundaries by passing `from` and `to`.
 
 ## Known issues
 
-None known. The issues found by running the first draft against a fresh database (zero steps,
-unknown users, deleting an unknown submission, submission routes under `/users`) are fixed, each
-with a test.
+The issues found by running the first draft against a fresh database (zero steps, unknown users,
+deleting an unknown submission, submission routes under `/users`) are fixed, each with a test.
+A second review against the brief found the following. They will be fixed one at a time.
+
+- **Concurrent submissions fail with `500`.** With 64 clients sending 400 submissions in
+  parallel, 80 failed with `database is locked (5)` or `(517)`. `Submit` starts a deferred
+  transaction, reads (the user check) and then writes. In WAL mode, a read transaction that has
+  to become a write transaction on an outdated snapshot fails at once, without waiting for the
+  busy timeout. Fix: start write transactions as `IMMEDIATE` (for example `_txlock=immediate` in
+  the connection string), with a concurrent test that fails before the fix. Then correct the
+  SQLite bullet in "Design decisions and trade-offs".
+- **Retention and deletion are not explained.** "Each submission should be retained" is read
+  together with "a user may submit multiple step counts on the same day": two submissions on the
+  same day are both kept and both counted. Deleting a submission is a separate, explicit
+  correction by the user. Add this to "Assumptions".
+- **Loose input checks are not documented.** A submission is accepted when:
+  - the body has data after the JSON object (`{...}{garbage}` returns `200`);
+  - the body has unknown fields (`"extra": 1` is ignored);
+  - the date is in the far future or past (years `2999` and `0001` are stored).
+
+  These are kept as they are. Document them in "Assumptions".
+- **Sub-second precision is dropped.** Dates and `from`/`to` are written with `time.RFC3339`,
+  which drops fractions of a second. A bound with milliseconds can then include or exclude a
+  submission from the same second by mistake. The comment in `0001_init.sql` gives the format
+  as `2006-01-02T15:04:05.000Z`, which does not match. This case is not handled: document that
+  dates are compared to the second.
 
 ## Possible improvements
+
+Agreed in the second review, to be done one at a time:
+
+- **Return the submission ID.** `POST /users/{user_id}` returns only the total, so a client must
+  list submissions to find the ID it needs to delete one. Add the generated `id` to the response.
+- **Explain the routes.** Add a comment to `Routes()`: `/users/...` routes are for one user's
+  content (submitting and reading that user's activity), and `/activities/...` routes cover every
+  user.
+- **Align the run command and the requirements.** README and `AGENTS.md` should both use
+  `go run cmd/main.go`. List the requirements to install before running, starting with Go 1.27.
+- **Add the missing doc comments** on `storage.Open` and `storage.ApplyMigrations`.
+- **Log levels.** Log validation failures (`400`) at `WARN` instead of `ERROR`, and log
+  successful responses at `INFO`.
+- **Exit cleanly on startup failure.** Replace `panic` in `main` with an error log and
+  `os.Exit(1)`.
+- **Export the handler type.** `activity.New` is exported but returns an unexported type. Export
+  the type and document it.
+- **Limit request bodies and set server timeouts.** Cap request bodies at a small size with
+  `http.MaxBytesReader`. Set read, write and idle timeouts on the `http.Server` (about 100 ms for
+  requests). There is no retry: a request that runs over the timeout fails.
 
 Not done, because they depend on information this assignment does not give:
 
